@@ -1,9 +1,11 @@
 <template>
 <!-- 等比缩放函数地址https://www.cnblogs.com/hdwang/p/8120590.html -->
-<el-container style="height: 600px; border: 1px solid #eee">
+<el-container style="height: 937px; border: 1px solid #eee">
   <el-container>
-    <el-header style="height: 60px; text-align: right; font-size: 12px">
-      <span>头部下拉框</span>
+    <el-header style="height: 60px; font-size: 12px">
+        <span>头部选择器</span>
+        <!-- <el-select placeholder="请选择活动区域">
+        </el-select> -->
     </el-header>
     <el-main>
       <el-row style="height: 100%">
@@ -20,11 +22,13 @@
             v-model="Content.children"
             class="content"
             @start="start"
+            @end="end"
             :move="move">
             <div v-for="(item, index) in item.children"
               class="content-item"
-              :title="item.name"
-              :class="item.type"
+              :data-name="item.name"
+              :data-index="index"
+              :class="[{ highLight:ActivedType==item.type }, item.type]"
               :type="item.type"
               :key="index"
               @click="itemClick(item)">
@@ -63,6 +67,8 @@
         >
           <el-menu-item
             v-for="(item, index) in Menuoptions"
+            :data-name="item.name"
+            :data-index="index"
             :key="index">
             <i class="el-icon-menu"></i>
             <span>{{ item.name }}</span>
@@ -75,6 +81,7 @@
 
 <script>
 export default {
+  name: 'indexEditor',
   data () {
     return {
       Content: [
@@ -83,7 +90,7 @@ export default {
           type: 0,
           children: [
             {
-              name: '类型a1',
+              name: '类型a11',
               type: 'typeA'
             },
             {
@@ -91,7 +98,7 @@ export default {
               type: 'typeA'
             },
             {
-              name: '类型b',
+              name: '类型b2',
               type: 'typeB'
             }
           ]
@@ -107,6 +114,10 @@ export default {
             {
               name: '类型C',
               type: 'typeC'
+            },
+            {
+              name: 'xx',
+              type: 'empty'
             }
           ]
         },
@@ -115,11 +126,11 @@ export default {
           type: 2,
           children: [
             {
-              name: '类型a1',
+              name: '类型a12',
               type: 'typeA'
             },
             {
-              name: '类型a1',
+              name: '类型a15',
               type: 'typeA'
             },
             {
@@ -137,7 +148,8 @@ export default {
         scroll: true,
         scrollSensitivity: 200
       },
-      Menuoptions: [
+      Menuoptions: [],
+      Menu: [
         {
           name: '组件类型A1',
           type: 'typeA'
@@ -176,16 +188,13 @@ export default {
         }
       ],
       Actived: {},
+      ActivedType: '',
       Pos: {}
     }
   },
   watch: {
     Actived (val) {
-      // this.getDivList(val.type)
-    },
-    Pos (val) {
-      console.log(val)
-      this.getDivList(this.Actived.type)
+    //   alert('sss')
     }
   },
   methods: {
@@ -193,7 +202,6 @@ export default {
     getDivList (type) {
       let a = '.' + type
       let divlist = document.querySelectorAll(a)
-      console.log(divlist)
       divlist.forEach((item) => {
         // 获取div坐标
         let rect = item.getBoundingClientRect()
@@ -203,33 +211,38 @@ export default {
         let py2 = rect.y + rect.height
         // 计算鼠标下落点是否进入
         if (this.Pos.x > px1 && this.Pos.x < px2 && this.Pos.y > py1 && this.Pos.y < py2) {
-          console.log(item)
+          let dataName = item.dataset.name
+          let dataIndex = item.dataset.index
+          this.Content.forEach((item, index) => {
+            if (item.children[dataIndex].name === dataName) {
+              this.Content[index].children[dataIndex].name = this.Actived.name
+              this.Actived.name = dataName
+            }
+          })
         }
       })
     },
     itemClick (item) {
       // 在vuex添加选中状态，根据类型反馈控制高亮和列表
-      this.Actived = item
-      console.log(item)
+      let type = item.type
+      this.Menuoptions = this.Menu.filter(item => {
+        return item.type === type
+      })
     },
     start: function (evt) {
-      console.log(evt)
-      let index = this.Content.forEach((item, index) => {
-        if (item.children[evt.oldIndex].name === evt.item.title) {
-          return index
-        }
-      })
       if (evt.target.className === 'content') {
-        alert('1')
-        this.Actived = this.Content[index].children[evt.children]
+        this.Content.forEach((item, index) => {
+          if (item.children[evt.oldIndex].name === evt.item.dataset.name) {
+            this.Actived = this.Content[index].children[evt.oldIndex]
+          }
+        })
       } else {
-        alert('2')
         // 拖动开始在vuex添加选中状态，同itemClick作用一样
         this.Actived = this.Menuoptions[evt.oldIndex]
       }
+      this.ActivedType = this.Actived.type
     },
     change: function (evt) {
-      console.log(evt)
     },
     getMousePos (event) {
       let e = event || window.event
@@ -243,12 +256,14 @@ export default {
     end: function (evt) {
       console.log(evt)
       this.getMousePos()
+      this.getDivList(this.Actived.type)
+      this.ActivedType = ''
     },
     move: function (evt, originalEvent) {
-      console.log(evt)
-      console.log('ss')
-      console.log(originalEvent)
     }
+  },
+  mounted () {
+    this.Menuoptions = this.Menu
   }
 }
 </script>
@@ -274,6 +289,12 @@ export default {
         }
         .map {
           flex-grow: 2;
+        }
+        .empty {
+          display: none;
+        }
+        .highLight {
+            background-color: red;
         }
       }
     }
